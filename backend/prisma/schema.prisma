@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model CentroCosto {
+  id      Int        @id @default(autoincrement()) @map("CentroCostoId")
+  nombre  String     @map("Nombre") @db.NVarChar(100)
+  empleados Empleado[]
+
+  @@map("CentrosCosto")
+}
+
+model Empleado {
+  id            Int             @id @default(autoincrement()) @map("EmpleadoId")
+  nombre        String          @map("Nombre") @db.NVarChar(150)
+  centroCostoId Int             @map("CentroCostoId")
+  activo        Boolean         @default(true) @map("Activo")
+  centroCosto   CentroCosto     @relation(fields: [centroCostoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  detalles      PlanillaDetalle[]
+
+  @@index([centroCostoId])
+  @@map("Empleados")
+}
+
+model Planilla {
+  id             Int       @id @default(autoincrement()) @map("PlanillaId")
+  periodo        String    @map("Periodo") @db.VarChar(7)
+  estado         String    @default("Borrador") @map("Estado") @db.VarChar(20)
+  sapReferencia  String?   @map("SapReferencia") @db.VarChar(100)
+  enviadaSapAt   DateTime? @map("EnviadaSapAt")
+  detalles       PlanillaDetalle[]
+
+  @@index([periodo, estado])
+  @@map("Planillas")
+}
+
+model PlanillaDetalle {
+  id         Int      @id @default(autoincrement()) @map("DetalleId")
+  planillaId Int      @map("PlanillaId")
+  empleadoId Int      @map("EmpleadoId")
+  concepto   String   @map("Concepto") @db.NVarChar(100)
+  monto      Decimal  @map("Monto") @db.Decimal(18, 2)
+  tipo       String   @map("Tipo") @db.Char(1)
+  planilla   Planilla @relation(fields: [planillaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([planillaId])
+  @@index([empleadoId])
+  @@map("PlanillaDetalle")
+}
