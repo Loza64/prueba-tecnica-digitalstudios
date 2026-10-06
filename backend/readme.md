@@ -27,7 +27,7 @@ API de planillas (Parte 2 de la prueba técnica): consulta del detalle de una pl
 La base de datos vive en `infra/mssql` y la API en `backend`. Son dos composes independientes que se conectan por
 una red Docker compartida llamada **`mssql_network`** (la crea el compose de SQL Server).
 
-**Cada proyecto tiene su propio `.env`.** El de `infra/mssql` configura la contraseña de SQL Server y el de `backend`
+**Cada servicio tiene su propio `.env`.** El de `infra/mssql` configura la contraseña de SQL Server y el de `backend`
 configura la API y la conexión a la base de datos. Ambos deben usar la **misma contraseña** (ver
 [Variables de entorno](#variables-de-entorno)).
 
@@ -62,45 +62,51 @@ pnpm dev                                  # http://localhost:4200
 
 ## Variables de entorno
 
-Hay **dos archivos `.env`**, uno por proyecto. Los dos se crean copiando su `.env.example`. Los `.env` reales están en
-`.gitignore`; solo se suben los `.env.example`.
+Hay **dos archivos `.env`** para esta guía: uno en `infra/mssql` y otro en `backend`. Créelos copiando sus
+`.env.example`; los archivos reales están en `.gitignore`.
 
 ### 1. `infra/mssql/.env` (SQL Server)
 
-Este archivo es **requerido por el compose de SQL Server**: Docker Compose lo lee automáticamente desde la misma
-carpeta del `docker-compose.yml` para resolver `${SA_PASSWORD}`.
+Este archivo permite establecer explícitamente la contraseña de SQL Server. Docker Compose lo lee automáticamente
+desde la misma carpeta del `docker-compose.yaml` para resolver `${SA_PASSWORD}`. La plantilla
+`infra/mssql/.env.example` contiene un valor de ejemplo que debes reemplazar.
 
 ```env
-SA_PASSWORD=ChangeMe123*
+SA_PASSWORD=ReplaceWithAStrongPassword123!
 ```
 
-| Variable | Por defecto | Descripción |
-|---|---|---|
-| `SA_PASSWORD` | `ChangeMe123*` | Contraseña del usuario `sa` de SQL Server |
+| Variable | En la plantilla | Respaldo de Compose si falta `.env` | Descripción |
+|---|---|---|---|
+| `SA_PASSWORD` | `ReplaceWithAStrongPassword123!` | `ChangeMe123*` | Contraseña del usuario `sa` de SQL Server |
 
 - Debe cumplir la política de complejidad de SQL Server: mínimo 8 caracteres, con mayúsculas, minúsculas, números y
   símbolos. Si no la cumple, el contenedor arranca y se detiene sin dar un error claro.
-- Si el `.env` no existe, el compose usa el valor por defecto `ChangeMe123*`, así que funciona, pero con una contraseña
-  conocida. Créalo siempre y cambia la contraseña fuera de local.
+- Si el `.env` no existe, Compose usa el valor de respaldo `ChangeMe123*`. No lo uses fuera de un entorno local
+  desechable; crea el `.env` desde la plantilla y cámbialo.
 - La contraseña **se fija la primera vez que se crea el volumen `data`**. Cambiar `SA_PASSWORD` después no cambia la
   contraseña de la base ya creada; para aplicarla hay que borrar el volumen (`docker compose down -v`, borra los datos).
 
 ### 2. `backend/.env` (API)
 
-Solo `DATABASE_URL` es obligatoria; el resto tiene valor por defecto.
+La plantilla `backend/.env.example` define `PORT`, `ORIGIN` y `DATABASE_URL`. Reemplaza el valor de ejemplo de la
+contraseña en `DATABASE_URL` por la contraseña elegida para SQL Server. Ajusta el host según dónde se ejecute la API:
+`localhost` desde tu máquina o `some-mssql` desde el contenedor de la API.
 
-| Variable | Por defecto | Descripción |
-|---|---|---|
-| `PORT` | `4200` | Puerto del servidor (también lo usa el compose de la API) |
-| `ORIGIN` | `*` | Origen(es) permitidos por CORS, separados por coma |
-| `DATABASE_URL` | — | Cadena de conexión de Prisma a SQL Server |
-| `SAP_MOCK_LATENCY_MS` | `300` | Latencia simulada de SAP |
-| `SAP_MOCK_FAIL_RATE` | `0` | Probabilidad de fallo simulado (0 a 1) |
-| `SAP_TX_TIMEOUT_MS` | `15000` | Timeout de la transacción (debe ser mayor que `CB_TIMEOUT_MS`) |
-| `CB_TIMEOUT_MS` | `8000` | Timeout del circuit breaker de SAP |
-| `CB_ERROR_THRESHOLD_PERCENTAGE` | `50` | % de errores para abrir el circuito |
-| `CB_RESET_TIMEOUT_MS` | `15000` | Tiempo antes de reintentar con el circuito abierto |
-| `CB_VOLUME_THRESHOLD` | `5` | Mínimo de llamadas antes de evaluar el circuito |
+Las variables de SAP y del circuit breaker son opcionales y no se incluyen en la plantilla. Si no las agregas al
+`.env`, la aplicación usa estos valores predeterminados:
+
+| Variable | En la plantilla | Predeterminado si se omite | Descripción |
+|---|---|---:|---|
+| `PORT` | `4200` | `4200` | Puerto del servidor (también lo usa el compose de la API) |
+| `ORIGIN` | `http://localhost:5173` | `*` | Origen(es) permitidos por CORS, separados por coma. Si se omite, se permite cualquier origen y no se habilitan credenciales. |
+| `DATABASE_URL` | Requiere configurar contraseña | Sin valor | Cadena de conexión de Prisma a SQL Server |
+| `SAP_MOCK_LATENCY_MS` | No incluida | `300` | Latencia simulada de SAP |
+| `SAP_MOCK_FAIL_RATE` | No incluida | `0` | Probabilidad de fallo simulado (0 a 1) |
+| `SAP_TX_TIMEOUT_MS` | No incluida | `15000` | Timeout de la transacción (debe ser mayor que `CB_TIMEOUT_MS`) |
+| `CB_TIMEOUT_MS` | No incluida | `8000` | Timeout del circuit breaker de SAP |
+| `CB_ERROR_THRESHOLD_PERCENTAGE` | No incluida | `50` | % de errores para abrir el circuito |
+| `CB_RESET_TIMEOUT_MS` | No incluida | `15000` | Tiempo antes de reintentar con el circuito abierto |
+| `CB_VOLUME_THRESHOLD` | No incluida | `5` | Mínimo de llamadas antes de evaluar el circuito |
 
 `.env` mínimo para desarrollo local:
 
@@ -148,7 +154,7 @@ services:
       - "1433:1433"
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${SA_PASSWORD:-ChangeMe123*}
+      SA_PASSWORD: ${SA_PASSWORD:-ChangeMe123*}
     volumes:
       - data:/var/opt/mssql
       - ./backups:/var/opt/mssql/backup
@@ -158,7 +164,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1",
+          "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' || exit 1",
         ]
       interval: 10s
       timeout: 5s
