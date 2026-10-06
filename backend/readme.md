@@ -100,13 +100,7 @@ Las variables de SAP y del circuit breaker son opcionales y no se incluyen en la
 | `PORT` | `4200` | `4200` | Puerto del servidor (también lo usa el compose de la API) |
 | `ORIGIN` | `http://localhost:5173` | `*` | Origen(es) permitidos por CORS, separados por coma. Si se omite, se permite cualquier origen y no se habilitan credenciales. |
 | `DATABASE_URL` | Requiere configurar contraseña | Sin valor | Cadena de conexión de Prisma a SQL Server |
-| `SAP_MOCK_LATENCY_MS` | No incluida | `300` | Latencia simulada de SAP |
-| `SAP_MOCK_FAIL_RATE` | No incluida | `0` | Probabilidad de fallo simulado (0 a 1) |
-| `SAP_TX_TIMEOUT_MS` | No incluida | `15000` | Timeout de la transacción (debe ser mayor que `CB_TIMEOUT_MS`) |
-| `CB_TIMEOUT_MS` | No incluida | `8000` | Timeout del circuit breaker de SAP |
-| `CB_ERROR_THRESHOLD_PERCENTAGE` | No incluida | `50` | % de errores para abrir el circuito |
-| `CB_RESET_TIMEOUT_MS` | No incluida | `15000` | Tiempo antes de reintentar con el circuito abierto |
-| `CB_VOLUME_THRESHOLD` | No incluida | `5` | Mínimo de llamadas antes de evaluar el circuito |
+
 
 `.env` mínimo para desarrollo local:
 
